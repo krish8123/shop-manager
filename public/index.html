@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Manager — Inventory, Sales & Profit</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shop Manager">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0f172a; --bg2:#111c34;
+    --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e9f2;
+    --brand:#4f46e5; --brand2:#6366f1; --brandsoft:#eef2ff;
+    --green:#059669; --greensoft:#ecfdf5;
+    --red:#dc2626; --redsoft:#fef2f2;
+    --amber:#d97706; --ambersoft:#fffbeb;
+    --shadow:0 10px 30px rgba(15,23,42,.08);
+    --radius:16px;
+  }
+  body.dark{
+    --card:#1e293b; --ink:#e2e8f0; --muted:#94a3b8; --line:#334155;
+    --brandsoft:#312e81; --greensoft:#064e3b; --redsoft:#7f1d1d; --ambersoft:#78350f;
+    --shadow:0 10px 30px rgba(0,0,0,.4);
+    background:linear-gradient(180deg,#0b1120 0%,#0f172a 100%);
+  }
+  body.dark .field input,body.dark .field select,body.dark .search-bar input,body.dark .auth-form input{background:#0f172a;color:var(--ink)}
+  body.dark th{background:#0f172a}
+  body.dark tbody tr:hover{background:#243244}
+  body.dark td{border-bottom-color:#273449}
+  body.dark .chip{background:#1e293b;color:var(--muted);border-color:#334155}
+  body.dark .table-wrap{border-color:#334155}
+  body.dark .auth-card{background:#1e293b}
+  body.dark .auth-tabs{background:#0f172a}
+  body.dark .auth-tab.active{background:#1e293b}
+  body.dark .bar-group text,body.dark .line-chart text,body.dark .bar-chart text{fill:var(--muted)}
+  body.dark .stat.green,body.dark .stat.red,body.dark .stat.brand,body.dark .stat.amber{background:var(--card)}
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#eef1f8 0%,#f6f8fc 100%);
+    color:var(--ink);min-height:100vh;font-size:15px;-webkit-font-smoothing:antialiased;
+  }
+  /* Top bar */
+  .topbar{
+    background:linear-gradient(120deg,var(--bg) 0%,var(--bg2) 100%);
+    color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px;
+    position:sticky;top:0;z-index:50;box-shadow:0 4px 20px rgba(15,23,42,.25);
+  }
+  .logo{
+    width:40px;height:40px;border-radius:11px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--brand2),#818cf8);
+    display:grid;place-items:center;font-size:22px;box-shadow:0 4px 12px rgba(99,102,241,.5);
+  }
+  .brandname{font-size:19px;font-weight:700;letter-spacing:.2px}
+  .brandsub{font-size:12px;opacity:.65;margin-top:1px}
+  .shopname-wrap{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .shopname-input{
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;
+    padding:8px 12px;border-radius:10px;font-size:13px;width:170px;outline:none;
+  }
+  .shopname-input::placeholder{color:rgba(255,255,255,.5)}
+
+  /* Nav tabs */
+  .nav{
+    display:flex;gap:6px;padding:14px 22px 0;background:transparent;flex-wrap:wrap;
+    max-width:1200px;margin:0 auto;width:100%;
+  }
+  .tab{
+    border:none;background:transparent;color:var(--muted);font-size:14px;font-weight:600;
+    padding:11px 18px;border-radius:11px 11px 0 0;cursor:pointer;display:flex;align-items:center;gap:8px;
+    transition:.15s;
+  }
+  .tab:hover{color:var(--ink);background:rgba(255,255,255,.5)}
+  .tab.active{background:var(--card);color:var(--brand);box-shadow:0 -4px 14px rgba(15,23,42,.05)}
+  .tab .ic{font-size:16px}
+
+  .wrap{max-width:1200px;margin:0 auto;padding:0 22px 60px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .panel.active .card{animation:rise .45s cubic-bezier(.2,.8,.25,1) both}
+  .panel.active .stat{animation:rise .45s cubic-bezier(.2,.8,.25,1) both}
+  .panel.active .card:nth-child(2){animation-delay:.05s}
+  .panel.active .card:nth-child(3){animation-delay:.1s}
+  .panel.active .card:nth-child(4){animation-delay:.15s}
+  .stats .stat:nth-child(1){animation-delay:.02s}
+  .stats .stat:nth-child(2){animation-delay:.08s}
+  .stats .stat:nth-child(3){animation-delay:.14s}
+  .stats .stat:nth-child(4){animation-delay:.2s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .stat{transition:transform .18s ease, box-shadow .18s ease}
+  .stat:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(15,23,42,.12)}
+  .btn{transition:transform .12s ease, box-shadow .15s ease, background .15s ease}
+  .btn:active{transform:scale(.96)}
+  tbody tr{transition:background .12s ease}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-top:18px;border:1px solid var(--line)}
+  .card h2{font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+  .card .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+  /* Stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+  .stat{
+    background:var(--card);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);
+    border:1px solid var(--line);position:relative;overflow:hidden;
+  }
+  .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:7px}
+  .stat .val{font-size:26px;font-weight:800;margin-top:8px;letter-spacing:-.5px}
+  .stat .sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .stat .badge{position:absolute;top:16px;right:16px;font-size:22px;opacity:.9}
+  .stat.green .val{color:var(--green)} .stat.green{background:linear-gradient(160deg,#fff,var(--greensoft))}
+  .stat.red .val{color:var(--red)} .stat.red{background:linear-gradient(160deg,#fff,var(--redsoft))}
+  .stat.brand .val{color:var(--brand)} .stat.brand{background:linear-gradient(160deg,#fff,var(--brandsoft))}
+  .stat.amber .val{color:var(--amber)} .stat.amber{background:linear-gradient(160deg,#fff,var(--ambersoft))}
+
+  /* Forms */
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+  .field input,.field select{
+    padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;font-size:14px;outline:none;
+    background:#fbfcfe;transition:.15s;width:100%;font-family:inherit;color:var(--ink);
+  }
+  .field input:focus,.field select:focus{border-color:var(--brand2);background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+  .btn{
+    border:none;border-radius:11px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;transition:.15s;font-family:inherit;white-space:nowrap;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.3)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(79,70,229,.4)}
+  .btn-ghost{background:var(--brandsoft);color:var(--brand)}
+  .btn-ghost:hover{background:#e0e7ff}
+  .btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+  .btn-danger{background:var(--redsoft);color:var(--red)}
+  .btn-danger:hover{background:#fee2e2}
+
+  /* Tables */
+  .table-wrap{overflow-x:auto;margin-top:4px;border-radius:12px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+  th{background:#f8fafc;text-align:left;padding:12px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line)}
+  td{padding:12px 14px;border-bottom:1px solid #f1f5f9}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafbff}
+  .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .pos{color:var(--green);font-weight:700}
+  .neg{color:var(--red);font-weight:700}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .pill-ok{background:var(--greensoft);color:var(--green)}
+  .pill-low{background:var(--ambersoft);color:var(--amber)}
+  .pill-out{background:var(--redsoft);color:var(--red)}
+  .prod-name{font-weight:700}
+  .prod-meta{font-size:11.5px;color:var(--muted)}
+
+  .empty{text-align:center;padding:42px 20px;color:var(--muted)}
+  .empty .em{font-size:42px;margin-bottom:10px;opacity:.5}
+  .empty p{font-size:13.5px}
+
+  .row-actions{display:flex;gap:6px;justify-content:flex-end}
+
+  .search-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .search-bar input{flex:1;min-width:180px;padding:10px 14px;border:1.5px solid var(--line);border-radius:11px;font-size:14px;outline:none;background:#fbfcfe}
+  .search-bar input:focus{border-color:var(--brand2);background:#fff}
+
+  .sale-summary{
+    display:flex;gap:20px;flex-wrap:wrap;background:var(--brandsoft);border-radius:12px;padding:14px 18px;margin-top:14px;
+  }
+  .sale-summary div{font-size:13px;color:var(--muted)}
+  .sale-summary b{display:block;font-size:20px;color:var(--ink);margin-top:2px;font-weight:800}
+  .sale-summary .profit b{color:var(--green)}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .section-head h2{margin:0}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);
+    background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:600;
+    box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:200;transition:transform .3s cubic-bezier(.2,.9,.3,1.3);
+    display:flex;align-items:center;gap:9px;max-width:90vw;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.ok{background:var(--green)} .toast.err{background:var(--red)}
+
+  .filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .chip{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+
+  .mini-note{font-size:12px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:7px}
+
+  select.qty-in-select{min-width:60px}
+
+  /* Bills gallery */
+  .bills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+  .bill-card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;transition:.15s;display:flex;flex-direction:column}
+  .bill-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+  .bill-thumb{width:100%;height:150px;object-fit:cover;cursor:zoom-in;background:#f1f5f9;display:block}
+  .bill-info{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:3px}
+  .bill-supplier{font-weight:700;font-size:14px}
+  .bill-amt{color:var(--green);font-weight:800;font-size:15px}
+  .bill-meta{font-size:11.5px;color:var(--muted)}
+  .bill-note{font-size:12px;color:var(--ink);margin-top:2px}
+  .bill-actions{display:flex;gap:6px;padding:0 14px 12px}
+
+  /* Sync indicator */
+  .sync-state{font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:999px;white-space:nowrap;transition:.2s}
+  .sync-saving{background:rgba(251,191,36,.22);color:#fde68a}
+  .sync-saved{background:rgba(16,185,129,.22);color:#a7f3d0}
+  .sync-offline{background:rgba(239,68,68,.22);color:#fecaca}
+
+  /* User badge / logout in topbar */
+  .user-badge{background:rgba(255,255,255,.14);color:#fff;font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px}
+  .logout-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:600;padding:7px 12px;border-radius:10px;cursor:pointer;transition:.15s}
+  .logout-btn:hover{background:rgba(255,255,255,.22)}
+
+  /* Auth screen */
+  .auth-screen{position:fixed;inset:0;z-index:400;background:linear-gradient(150deg,#0f172a 0%,#1e1b4b 55%,#312e81 100%);display:grid;place-items:center;padding:20px;overflow:auto}
+  .auth-card{background:#fff;border-radius:22px;padding:34px 30px;width:100%;max-width:390px;box-shadow:0 30px 70px rgba(0,0,0,.4);text-align:center}
+  .auth-logo{width:64px;height:64px;border-radius:18px;margin:0 auto 14px;background:linear-gradient(135deg,var(--brand2),#818cf8);display:grid;place-items:center;font-size:34px;box-shadow:0 8px 20px rgba(99,102,241,.5)}
+  .auth-title{font-size:24px;font-weight:800;letter-spacing:-.3px}
+  .auth-tag{color:var(--muted);font-size:13px;margin-top:3px;margin-bottom:22px}
+  .auth-tabs{display:flex;background:#f1f5f9;border-radius:12px;padding:4px;margin-bottom:20px}
+  .auth-tab{flex:1;border:none;background:transparent;padding:10px;border-radius:9px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s;font-family:inherit}
+  .auth-tab.active{background:#fff;color:var(--brand);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+  .auth-form{text-align:left;display:flex;flex-direction:column;gap:5px}
+  .auth-form label{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:10px}
+  .auth-form input{padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;font-size:15px;outline:none;background:#fbfcfe;font-family:inherit}
+  .auth-form input:focus{border-color:var(--brand2);background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+  .auth-submit{justify-content:center;margin-top:18px;padding:13px}
+  .auth-err{color:var(--red);font-size:13px;font-weight:600;margin-top:10px;min-height:18px;text-align:center}
+  .auth-note{font-size:12px;color:var(--muted);margin-top:20px;line-height:1.5}
+  body.locked{overflow:hidden}
+
+  /* Charts */
+  .chart-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);font-weight:600;margin:6px 0 14px}
+  .chart-legend span{display:flex;align-items:center;gap:6px}
+  .chart-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .chart-scroll{overflow-x:auto;padding-bottom:6px}
+  .bar-group text, .line-chart text{font-size:11px;fill:var(--muted);font-family:inherit}
+  .bar-val{font-size:10px;font-weight:700}
+
+  /* Image modal */
+  .img-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.9);z-index:300;place-items:center;padding:24px;cursor:zoom-out}
+  .img-modal.open{display:grid}
+  .img-modal img{max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .img-modal-close{position:absolute;top:18px;right:24px;color:#fff;font-size:30px;cursor:pointer;font-weight:700;opacity:.85}
+  .img-modal-close:hover{opacity:1}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .shopname-input{width:120px}
+    .brandsub{display:none}
+    .wrap,.nav{padding-left:12px;padding-right:12px}
+    .topbar{padding:14px 14px}
+  }
+  @media(max-width:440px){
+    .stats{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🏪</div>
+    <h1 class="auth-title">Shop Manager</h1>
+    <p class="auth-tag">Inventory · Sales · Profit · Reports</p>
+
+    <div class="auth-tabs">
+      <button id="authTabLogin" class="auth-tab active" onclick="showAuthMode('login')">Log in</button>
+      <button id="authTabSignup" class="auth-tab" onclick="showAuthMode('signup')">Sign up</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginForm" class="auth-form">
+      <label id="lblLoginUser">Username</label>
+      <input id="loginUser" placeholder="your username" autocomplete="username">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary auth-submit" onclick="doLogin()">Log in →</button>
+      <div id="loginErr" class="auth-err"></div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signupForm" class="auth-form" style="display:none">
+      <label>Shop name</label>
+      <input id="suShop" placeholder="e.g. Krishna Garments">
+      <label id="lblSuUser">Choose a username</label>
+      <input id="suUser" placeholder="username" autocomplete="username">
+      <label>Choose a password</label>
+      <input id="suPass" type="password" placeholder="at least 4 characters" autocomplete="new-password">
+      <label>Confirm password</label>
+      <input id="suPass2" type="password" placeholder="re-type password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+      <button class="btn btn-primary auth-submit" onclick="doSignup()">Create my account →</button>
+      <div id="signupErr" class="auth-err"></div>
+    </div>
+
+    <p class="auth-note" id="localBadgeNote">🔒 Your account &amp; data stay private on this device. Each retailer can create their own account here.</p>
+    <p class="auth-note" id="cloudBadgeNote" style="display:none;color:var(--brand)">☁️ Cloud sync is ON — log in from any phone or laptop and your data follows you.</p>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo">🏪</div>
+  <div>
+    <div class="brandname">Shop Manager</div>
+    <div class="brandsub">Inventory · Sales · Profit · Expenses</div>
+  </div>
+  <div class="shopname-wrap">
+    <input id="shopName" class="shopname-input" placeholder="Your shop name…" />
+    <span id="syncState" class="sync-state" title="Cloud sync status"></span>
+    <button id="themeBtn" class="logout-btn" onclick="toggleTheme()" title="Light / dark">🌙</button>
+    <span id="userBadge" class="user-badge" title="Logged in"></span>
+    <button id="logoutBtn" class="logout-btn" onclick="logout()" title="Log out">Log out</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="tab active" data-panel="dashboard"><span class="ic">📊</span> Dashboard</button>
+  <button class="tab" data-panel="reports"><span class="ic">📈</span> Reports</button>
+  <button class="tab" data-panel="inventory"><span class="ic">📦</span> Inventory</button>
+  <button class="tab" data-panel="sales"><span class="ic">🛒</span> Sales</button>
+  <button class="tab" data-panel="expenses"><span class="ic">💸</span> Expenses</button>
+  <button class="tab" data-panel="bills"><span class="ic">🧾</span> Wholesale Bills</button>
+  <button class="tab" data-panel="data"><span class="ic">⚙️</span> Data</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="panel active" id="dashboard">
+    <div class="stats">
+      <div class="stat green">
+        <div class="lbl">💰 Net Profit</div>
+        <div class="val" id="dashNetProfit">₹0</div>
+        <div class="sub" id="dashNetSub">Sales profit − expenses</div>
+      </div>
+      <div class="stat brand">
+        <div class="lbl">🛒 Total Sales Revenue</div>
+        <div class="val" id="dashRevenue">₹0</div>
+        <div class="sub" id="dashSalesCount">0 sales</div>
+      </div>
+      <div class="stat amber">
+        <div class="lbl">📦 Stock Value (cost)</div>
+        <div class="val" id="dashStockValue">₹0</div>
+        <div class="sub" id="dashStockUnits">0 units in stock</div>
+      </div>
+      <div class="stat red">
+        <div class="lbl">💸 Total Expenses</div>
+        <div class="val" id="dashExpenses">₹0</div>
+        <div class="sub" id="dashExpCount">0 entries</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📈 Business at a glance</h2>
+      <div class="hint">A quick health-check of your shop.</div>
+      <div class="table-wrap">
+        <table>
+          <tbody id="dashBreakdown"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>⚠️ Low / out of stock</h2>
+      </div>
+      <div class="hint">Products at or below their low-stock alert level — time to reorder.</div>
+      <div id="lowStockBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>🧾 Recent sales</h2>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('sales')">Go to Sales →</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Product</th><th class="num">Qty</th><th class="num">Revenue</th><th class="num">Profit</th></tr></thead>
+          <tbody id="dashRecentSales"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REPORTS ================= -->
+  <section class="panel" id="reports">
+    <div class="card">
+      <div class="section-head">
+        <h2>📈 Business reports</h2>
+        <div class="filter-chips" id="reportRange">
+          <span class="chip active" data-range="weekly" onclick="setReportRange('weekly')">Weekly</span>
+          <span class="chip" data-range="monthly" onclick="setReportRange('monthly')">Monthly</span>
+        </div>
+      </div>
+      <div class="hint">Track how your shop is improving over time. Revenue = full retail amount you sold · Profit = retail − wholesale · Purchases = your wholesale bills · Expenses = shop running costs.</div>
+
+      <!-- comparison cards -->
+      <div class="stats" id="reportCompare" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="chartTitle">💵 Revenue, Profit &amp; Expenses</h2>
+      <div class="hint" id="chartSub">Bars grouped by period.</div>
+      <div class="chart-legend">
+        <span><i style="background:var(--brand)"></i>Revenue</span>
+        <span><i style="background:var(--green)"></i>Profit</span>
+        <span><i style="background:var(--amber)"></i>Purchases</span>
+        <span><i style="background:var(--red)"></i>Expenses</span>
+      </div>
+      <div class="chart-scroll"><div id="barChart"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>📉 Profit trend</h2>
+      <div class="hint">Your profit line over recent periods — watch it climb! 🚀</div>
+      <div class="chart-scroll"><div id="lineChart"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>🏆 Top selling products</h2>
+      <div class="hint">Which items make you the most profit — focus on these.</div>
+      <div id="topProducts"></div>
+    </div>
+  </section>
+
+  <!-- ================= INVENTORY ================= -->
+  <section class="panel" id="inventory">
+    <div class="card">
+      <h2>➕ Add / stock a product</h2>
+      <div class="hint">Enter the wholesale (cost) price you paid and how many pieces you bought. The retail price is <b>optional</b> — it's just a suggested default. You set the actual selling price for <b>each</b> customer at the time of sale, so you can sell the same item at ₹150 to one customer and ₹180 to another.</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Product name *</label>
+          <input id="pName" placeholder="e.g. Cotton T-Shirt (Blue, M)">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input id="pCat" placeholder="e.g. T-Shirts">
+        </div>
+        <div class="field">
+          <label>Wholesale price (₹) *</label>
+          <input id="pCost" type="number" min="0" step="0.01" placeholder="100">
+        </div>
+        <div class="field">
+          <label>Suggested retail price (₹) — optional</label>
+          <input id="pPrice" type="number" min="0" step="0.01" placeholder="e.g. 180 (can change per sale)">
+        </div>
+        <div class="field">
+          <label>Quantity in stock *</label>
+          <input id="pQty" type="number" min="0" step="1" placeholder="20">
+        </div>
+        <div class="field">
+          <label>Low-stock alert at</label>
+          <input id="pLow" type="number" min="0" step="1" placeholder="5">
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="addProduct()">Save product</button>
+        </div>
+      </div>
+      <div class="mini-note">💡 Tip: To restock an existing product, just add it again with the same name — quantities add up automatically.</div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>📦 Your inventory</h2>
+        <div class="toolbar">
+          <span id="invCount" class="prod-meta"></span>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="invSearch" placeholder="🔍 Search products…" oninput="renderInventory()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="num">Wholesale</th>
+              <th class="num">Suggested retail</th>
+              <th class="num">Margin/unit</th>
+              <th class="num">In stock</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="invBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SALES ================= -->
+  <section class="panel" id="sales">
+    <div class="card">
+      <h2>🛒 Record a sale</h2>
+      <div class="hint">Pick a product, then type the <b>actual price this customer paid</b> — you can enter a different amount for every sale (₹150 for one, ₹180 for the next). The app calculates profit for that exact price and removes the pieces from stock automatically.</div>
+      <div class="form-grid">
+        <div class="field" style="grid-column:span 2">
+          <label>Product *</label>
+          <select id="sProduct" onchange="onSaleProductChange()"></select>
+        </div>
+        <div class="field">
+          <label>Quantity *</label>
+          <input id="sQty" type="number" min="1" step="1" value="1" oninput="updateSalePreview()">
+        </div>
+        <div class="field">
+          <label>Price this customer paid / unit (₹) *</label>
+          <input id="sPrice" type="number" min="0" step="0.01" placeholder="type this sale's price" oninput="updateSalePreview()">
+          <span id="sPriceHint" class="prod-meta"></span>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input id="sDate" type="date">
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="recordSale()">Record sale</button>
+        </div>
+      </div>
+      <div class="sale-summary" id="salePreview" style="display:none">
+        <div>Available stock<b id="spStock">0</b></div>
+        <div>Cost (wholesale)<b id="spCost">₹0</b></div>
+        <div>Total revenue<b id="spRevenue">₹0</b></div>
+        <div class="profit">Profit on this sale<b id="spProfit">₹0</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>🧾 Sales history</h2>
+        <div class="toolbar">
+          <span id="salesTotalLbl" class="prod-meta"></span>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="salesSearch" placeholder="🔍 Search sales by product…" oninput="renderSales()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th class="num">Qty</th>
+              <th class="num">Cost/u</th>
+              <th class="num">Price/u</th>
+              <th class="num">Revenue</th>
+              <th class="num">Profit</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="salesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EXPENSES ================= -->
+  <section class="panel" id="expenses">
+    <div class="card">
+      <h2>💸 Add an expense</h2>
+      <div class="hint">Record shop running costs — rent, electricity, staff salary, transport, packaging, etc. These are subtracted from your profit.</div>
+      <div class="form-grid">
+        <div class="field" style="grid-column:span 2">
+          <label>Description *</label>
+          <input id="eDesc" placeholder="e.g. Shop rent for September">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="eCat">
+            <option>Rent</option>
+            <option>Electricity</option>
+            <option>Salary</option>
+            <option>Transport</option>
+            <option>Packaging</option>
+            <option>Marketing</option>
+            <option>Maintenance</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount (₹) *</label>
+          <input id="eAmt" type="number" min="0" step="0.01" placeholder="5000">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input id="eDate" type="date">
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="addExpense()">Add expense</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>📋 Expense history</h2>
+        <span id="expTotalLbl" class="prod-meta"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th><th></th></tr>
+          </thead>
+          <tbody id="expBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WHOLESALE BILLS ================= -->
+  <section class="panel" id="bills">
+    <div class="card">
+      <h2>🧾 Upload a wholesale / purchase bill</h2>
+      <div class="hint">Snap or upload a photo of the bills you get from your suppliers when you buy stock. Add the supplier name and amount so you can find them easily later. Photos are stored privately on this device.</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Bill photo *</label>
+          <label class="btn btn-ghost" style="cursor:pointer;justify-content:center">📷 Choose / take photo
+            <input id="bFile" type="file" accept="image/*" style="display:none" onchange="onBillFile(event)">
+          </label>
+        </div>
+        <div class="field">
+          <label>Supplier / shop name</label>
+          <input id="bSupplier" placeholder="e.g. Sharma Wholesale">
+        </div>
+        <div class="field">
+          <label>Bill amount (₹)</label>
+          <input id="bAmount" type="number" min="0" step="0.01" placeholder="e.g. 5000">
+        </div>
+        <div class="field">
+          <label>Bill date</label>
+          <input id="bDate" type="date">
+        </div>
+        <div class="field" style="grid-column:span 2">
+          <label>Note (optional)</label>
+          <input id="bNote" placeholder="e.g. 20 T-shirts + 10 jeans">
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="addBill()">Save bill</button>
+        </div>
+      </div>
+      <div id="billPreviewWrap" style="display:none;margin-top:16px">
+        <div class="prod-meta" style="margin-bottom:6px">Selected photo preview:</div>
+        <img id="billPreviewImg" style="max-height:180px;border-radius:12px;border:1px solid var(--line)">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>📂 Saved bills</h2>
+        <span id="billsTotalLbl" class="prod-meta"></span>
+      </div>
+      <div id="billsGallery"></div>
+    </div>
+  </section>
+
+  <!-- ================= DATA ================= -->
+  <section class="panel" id="data">
+    <div class="card">
+      <h2>⚙️ Data & backup</h2>
+      <div class="hint">All your data is saved privately in this browser on this device. Nothing is uploaded anywhere. Use backup to keep a copy or move to another device.</div>
+      <div class="toolbar" style="margin-left:0;gap:10px">
+        <button class="btn btn-ghost" onclick="exportData()">⬇️ Download backup (.json)</button>
+        <label class="btn btn-ghost" style="cursor:pointer">⬆️ Restore backup
+          <input type="file" accept="application/json" style="display:none" onchange="importData(event)">
+        </label>
+        <button class="btn btn-ghost" onclick="downloadCSV()">📄 Export sales as CSV</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ Reset everything</button>
+      </div>
+      <div class="mini-note">⚠️ Clearing browser data / history may erase your records — download a backup regularly to stay safe.</div>
+      <div id="cloudStatusNote" class="mini-note"></div>
+    </div>
+    <div class="card">
+      <h2>❓ How to use</h2>
+      <div class="hint" style="margin-bottom:0;line-height:1.7">
+        <b>1. Inventory tab</b> → Add each product with the wholesale price you paid and quantity.<br>
+        <b>2. Sales tab</b> → When a customer buys, pick the product, enter the retail price they paid. Profit is calculated and stock reduces automatically.<br>
+        <b>3. Expenses tab</b> → Log shop costs like rent and electricity.<br>
+        <b>4. Dashboard</b> → See your total revenue, profit, stock value and net profit any time.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Fullscreen bill viewer -->
+<div id="imgModal" class="img-modal" onclick="closeImgModal()">
+  <span class="img-modal-close">✕</span>
+  <img id="imgModalImg" onclick="event.stopPropagation()">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Shop Manager talks to its own backend for accounts + cloud sync.
+   When opened as a plain file with no server, it runs offline (local).
+   ===================================================================== */
+const API = ''; // same origin as the served app
+</script>
+
+<script>
+/* ------------- Storage ------------- */
+let DB_KEY = 'shopManagerData_v1'; // becomes per-user after login
+let db = { shopName:'', products:[], sales:[], expenses:[], bills:[] };
+
+/* ------------- Cloud (server API) layer ------------- */
+let CLOUD = false, authToken = null, currentUID = null, cloudSaveTimer = null, cloudPullTimer = null;
+const TOKEN_KEY = 'shopManagerToken_v1';
+
+async function initCloud(){
+  // Detect whether we're served by our backend (cloud) or opened as a file (offline).
+  try{
+    const r = await fetch(API + '/api/health', {cache:'no-store'});
+    const j = await r.json();
+    CLOUD = !!(j && j.cloud);
+  }catch(e){ CLOUD = false; }
+  return CLOUD;
+}
+function apiHeaders(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer '+(authToken||'') }; }
+
+function scheduleCloudSave(){
+  if(!CLOUD || !authToken) return;
+  clearTimeout(cloudSaveTimer);
+  setSyncState('saving');
+  cloudSaveTimer = setTimeout(async ()=>{
+    try{
+      await fetch(API+'/api/data', { method:'POST', headers:apiHeaders(), body: JSON.stringify({data:db}) });
+      setSyncState('saved');
+    }catch(e){ setSyncState('offline'); }
+  }, 600);
+}
+async function cloudPull(){
+  if(!CLOUD || !authToken) return;
+  try{
+    const r = await fetch(API+'/api/data', { headers:apiHeaders() });
+    if(r.status===401){ logout(); return; }
+    const j = await r.json();
+    if(j && j.data){
+      db = Object.assign({shopName:'',products:[],sales:[],expenses:[],bills:[]}, j.data);
+      try{ localStorage.setItem(DB_KEY, JSON.stringify(db)); }catch(e){}
+      initUI();
+    }
+  }catch(e){ setSyncState('offline'); }
+}
+function setSyncState(state){
+  const el = document.getElementById('syncState');
+  if(!el || !CLOUD) return;
+  const map = {
+    saving:{t:'⟳ Syncing…', c:'sync-saving'},
+    saved:{t:'✓ Saved to cloud', c:'sync-saved'},
+    offline:{t:'⚠ Offline — will retry', c:'sync-offline'}
+  };
+  const s = map[state]||map.saved;
+  el.textContent = s.t; el.className = 'sync-state '+s.c;
+}
+function applyAuthLabels(){
+  if(!CLOUD) return;
+  document.getElementById('lblLoginUser').textContent = 'Email';
+  document.getElementById('loginUser').placeholder = 'you@example.com';
+  document.getElementById('loginUser').type = 'email';
+  document.getElementById('lblSuUser').textContent = 'Your email';
+  document.getElementById('suUser').placeholder = 'you@example.com';
+  document.getElementById('suUser').type = 'email';
+  document.getElementById('cloudBadgeNote').style.display = 'block';
+  document.getElementById('localBadgeNote').style.display = 'none';
+}
+function cloudEnterApp(email){
+  DB_KEY = 'shopManagerData_v1__' + (currentUID||'cloud');
+  load(); // instant cached view
+  document.getElementById('userBadge').textContent = '☁️ ' + (email || 'synced');
+  document.getElementById('authScreen').style.display = 'none';
+  document.body.classList.remove('locked');
+  initUI();
+  document.getElementById('sDate').value = todayStr();
+  document.getElementById('eDate').value = todayStr();
+  document.getElementById('bDate').value = todayStr();
+  cloudPull();
+  // gentle polling so other devices' changes show up
+  clearInterval(cloudPullTimer);
+  cloudPullTimer = setInterval(cloudPull, 15000);
+}
+async function cloudSignup(){
+  const shop = document.getElementById('suShop').value.trim();
+  const email = document.getElementById('suUser').value.trim();
+  const p1 = document.getElementById('suPass').value;
+  const p2 = document.getElementById('suPass2').value;
+  const err = document.getElementById('signupErr');
+  if(!email){ err.textContent='Enter your email'; return; }
+  if(p1.length<4){ err.textContent='Password must be at least 4 characters'; return; }
+  if(p1!==p2){ err.textContent='Passwords do not match'; return; }
+  err.textContent='Creating account…';
+  try{
+    const r = await fetch(API+'/api/signup', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:p1,shop})});
+    const j = await r.json();
+    if(!r.ok){ err.textContent = j.error||'Could not sign up'; return; }
+    authToken = j.token; currentUID = email;
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({token:j.token, email}));
+    document.getElementById('suShop').value=document.getElementById('suUser').value=document.getElementById('suPass').value=document.getElementById('suPass2').value='';
+    cloudEnterApp(email);
+    toast('Welcome, account created!','ok');
+  }catch(e){ err.textContent='No connection to server'; }
+}
+async function cloudLogin(){
+  const email = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  if(!email){ err.textContent='Enter your email'; return; }
+  err.textContent='Logging in…';
+  try{
+    const r = await fetch(API+'/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pass})});
+    const j = await r.json();
+    if(!r.ok){ err.textContent = j.error||'Could not log in'; return; }
+    authToken = j.token; currentUID = email;
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({token:j.token, email}));
+    document.getElementById('loginUser').value=document.getElementById('loginPass').value='';
+    cloudEnterApp(email);
+  }catch(e){ err.textContent='No connection to server'; }
+}
+
+/* ------------- Auth (device-local accounts) ------------- */
+const AUTH_KEY = 'shopManagerAuth_v1';
+let auth = { users:{}, current:null };
+function loadAuth(){ try{ const r=localStorage.getItem(AUTH_KEY); if(r) auth=JSON.parse(r); }catch(e){} }
+function saveAuth(){ localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); }
+// lightweight hash (obscures the password on this device; not bank-grade)
+function hashPass(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return 'h'+h.toString(36); }
+
+function showAuthMode(mode){
+  const login = mode==='login';
+  document.getElementById('authTabLogin').classList.toggle('active', login);
+  document.getElementById('authTabSignup').classList.toggle('active', !login);
+  document.getElementById('loginForm').style.display = login?'flex':'none';
+  document.getElementById('signupForm').style.display = login?'none':'flex';
+  document.getElementById('loginErr').textContent='';
+  document.getElementById('signupErr').textContent='';
+}
+function doSignup(){
+  if(CLOUD) return cloudSignup();
+  const shop = document.getElementById('suShop').value.trim();
+  const user = document.getElementById('suUser').value.trim().toLowerCase();
+  const p1 = document.getElementById('suPass').value;
+  const p2 = document.getElementById('suPass2').value;
+  const err = document.getElementById('signupErr');
+  if(!user){ err.textContent='Choose a username'; return; }
+  if(auth.users[user]){ err.textContent='That username already exists — please log in'; return; }
+  if(p1.length<4){ err.textContent='Password must be at least 4 characters'; return; }
+  if(p1!==p2){ err.textContent='Passwords do not match'; return; }
+  auth.users[user] = { phash:hashPass(p1), shop:shop||'' };
+  auth.current = user; saveAuth();
+  document.getElementById('suShop').value=document.getElementById('suUser').value=document.getElementById('suPass').value=document.getElementById('suPass2').value='';
+  enterApp();
+  toast('Welcome, account created!','ok');
+}
+function doLogin(){
+  if(CLOUD) return cloudLogin();
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  const rec = auth.users[user];
+  if(!rec){ err.textContent='No account found with that username'; return; }
+  if(rec.phash!==hashPass(pass)){ err.textContent='Incorrect password'; return; }
+  auth.current = user; saveAuth();
+  document.getElementById('loginUser').value=document.getElementById('loginPass').value='';
+  enterApp();
+}
+function logout(){
+  if(CLOUD){
+    clearInterval(cloudPullTimer);
+    try{ fetch(API+'/api/logout', {method:'POST', headers:apiHeaders()}); }catch(e){}
+    authToken=null; currentUID=null;
+    localStorage.removeItem(TOKEN_KEY);
+    document.getElementById('authScreen').style.display='grid';
+    document.body.classList.add('locked');
+    showAuthMode('login');
+    return;
+  }
+  auth.current = null; saveAuth();
+  document.getElementById('authScreen').style.display='grid';
+  document.body.classList.add('locked');
+  showAuthMode('login');
+}
+function enterApp(){
+  DB_KEY = 'shopManagerData_v1__' + auth.current;
+  load();
+  // seed shop name from the signup if the data is fresh
+  if(!db.shopName && auth.users[auth.current] && auth.users[auth.current].shop){
+    db.shopName = auth.users[auth.current].shop; save();
+  }
+  document.getElementById('userBadge').textContent = '👤 ' + auth.current;
+  document.getElementById('authScreen').style.display='none';
+  document.body.classList.remove('locked');
+  initUI();
+  document.getElementById('sDate').value = todayStr();
+  document.getElementById('eDate').value = todayStr();
+  document.getElementById('bDate').value = todayStr();
+}
+
+/* ------------- Image storage (IndexedDB) ------------- */
+/* Bill photos are stored as compressed data-URLs in IndexedDB so large
+   images don't overflow the small localStorage quota. */
+let idb = null;
+function openIDB(){
+  return new Promise((resolve)=>{
+    if(idb) return resolve(idb);
+    const req = indexedDB.open('shopManagerImages', 1);
+    req.onupgradeneeded = e=>{ e.target.result.createObjectStore('images'); };
+    req.onsuccess = e=>{ idb = e.target.result; resolve(idb); };
+    req.onerror = ()=> resolve(null);
+  });
+}
+async function idbPut(key, val){
+  const d = await openIDB(); if(!d) return;
+  return new Promise(res=>{ const tx=d.transaction('images','readwrite'); tx.objectStore('images').put(val,key); tx.oncomplete=()=>res(); tx.onerror=()=>res(); });
+}
+async function idbGet(key){
+  const d = await openIDB(); if(!d) return null;
+  return new Promise(res=>{ const tx=d.transaction('images','readonly'); const r=tx.objectStore('images').get(key); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null); });
+}
+async function idbDel(key){
+  const d = await openIDB(); if(!d) return;
+  return new Promise(res=>{ const tx=d.transaction('images','readwrite'); tx.objectStore('images').delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>res(); });
+}
+/* Resize + compress an image file to a JPEG data-URL (max ~1400px). */
+function compressImage(file, maxDim=1400, quality=0.72){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let {width:w, height:h} = img;
+        if(w>maxDim || h>maxDim){ const r=Math.min(maxDim/w, maxDim/h); w=Math.round(w*r); h=Math.round(h*r); }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(raw) db = Object.assign(db, JSON.parse(raw));
+  }catch(e){ console.warn('load failed', e); }
+}
+function save(){
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+  catch(e){ toast('Could not save — storage may be full','err'); }
+  if(CLOUD && currentUID) scheduleCloudSave();
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const money = n => '₹' + Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const todayStr = () => new Date().toISOString().slice(0,10);
+function fmtDate(d){
+  if(!d) return '—';
+  const dt = new Date(d+'T00:00:00');
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+/* ------------- Toast ------------- */
+let toastTimer;
+function toast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.className = 'toast show ' + type;
+  t.innerHTML = (type==='ok'?'✅ ':type==='err'?'⚠️ ':'') + msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.className='toast '+type, 2600);
+}
+
+/* ------------- Tabs ------------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=> switchTab(tab.dataset.panel));
+});
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.panel===name));
+  document.querySelectorAll('.panel').forEach(p=> p.classList.toggle('active', p.id===name));
+  if(name==='dashboard') renderDashboard();
+  if(name==='reports') renderReports();
+  if(name==='sales') refreshProductSelect();
+  if(name==='bills') renderBills();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ------------- Shop name ------------- */
+const shopNameEl = document.getElementById('shopName');
+shopNameEl.addEventListener('input', ()=>{ db.shopName = shopNameEl.value; save(); });
+
+/* ------------- Inventory ------------- */
+function addProduct(){
+  const name = document.getElementById('pName').value.trim();
+  const cat  = document.getElementById('pCat').value.trim();
+  const cost = parseFloat(document.getElementById('pCost').value);
+  const price= parseFloat(document.getElementById('pPrice').value);
+  const qty  = parseInt(document.getElementById('pQty').value);
+  const low  = parseInt(document.getElementById('pLow').value);
+
+  if(!name){ toast('Enter a product name','err'); return; }
+  if(isNaN(cost) || cost<0){ toast('Enter a valid wholesale price','err'); return; }
+  if(isNaN(qty) || qty<0){ toast('Enter a valid quantity','err'); return; }
+
+  // merge if same name (case-insensitive) exists
+  const existing = db.products.find(p=> p.name.toLowerCase()===name.toLowerCase());
+  if(existing){
+    existing.qty += qty;
+    existing.cost = cost; // update to latest cost
+    if(!isNaN(price)) existing.price = price;
+    if(cat) existing.category = cat;
+    if(!isNaN(low)) existing.low = low;
+    toast('Restocked "'+name+'" (+'+qty+')','ok');
+  }else{
+    db.products.push({
+      id: uid(), name, category:cat, cost,
+      price: isNaN(price)?0:price,
+      qty, low: isNaN(low)?5:low
+    });
+    toast('Product added','ok');
+  }
+  save();
+  // clear form
+  ['pName','pCat','pCost','pPrice','pQty','pLow'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('pName').focus();
+  renderInventory(); refreshProductSelect();
+}
+
+function stockStatus(p){
+  if(p.qty<=0) return {cls:'pill-out', txt:'Out of stock'};
+  if(p.qty<=(p.low||0)) return {cls:'pill-low', txt:'Low stock'};
+  return {cls:'pill-ok', txt:'In stock'};
+}
+
+function renderInventory(){
+  const q = (document.getElementById('invSearch').value||'').toLowerCase();
+  const list = db.products.filter(p=> p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q));
+  const body = document.getElementById('invBody');
+  document.getElementById('invCount').textContent = db.products.length + ' product' + (db.products.length!==1?'s':'');
+  if(list.length===0){
+    body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="em">📦</div><p>${db.products.length===0?'No products yet — add your first product above.':'No products match your search.'}</p></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(p=>{
+    const st = stockStatus(p);
+    const margin = (p.price||0) - p.cost;
+    const mCls = margin>0?'pos':(margin<0?'neg':'');
+    return `<tr>
+      <td><div class="prod-name">${esc(p.name)}</div>${p.category?`<div class="prod-meta">${esc(p.category)}</div>`:''}</td>
+      <td class="num">${money(p.cost)}</td>
+      <td class="num">${p.price?money(p.price):'—'}</td>
+      <td class="num ${mCls}">${p.price?money(margin):'—'}</td>
+      <td class="num">${p.qty}</td>
+      <td><span class="pill ${st.cls}">${st.txt}</span></td>
+      <td><div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function editProduct(id){
+  const p = db.products.find(x=>x.id===id); if(!p) return;
+  const name = prompt('Product name:', p.name); if(name===null) return;
+  const cost = prompt('Wholesale price (₹):', p.cost); if(cost===null) return;
+  const price= prompt('Retail price (₹):', p.price); if(price===null) return;
+  const qty  = prompt('Quantity in stock:', p.qty); if(qty===null) return;
+  const low  = prompt('Low-stock alert level:', p.low); if(low===null) return;
+  p.name = name.trim()||p.name;
+  p.cost = parseFloat(cost)||0;
+  p.price= parseFloat(price)||0;
+  p.qty  = parseInt(qty)||0;
+  p.low  = parseInt(low)||0;
+  save(); renderInventory(); refreshProductSelect();
+  toast('Product updated','ok');
+}
+
+function deleteProduct(id){
+  const p = db.products.find(x=>x.id===id); if(!p) return;
+  if(!confirm('Delete "'+p.name+'"? This does not affect past sales records.')) return;
+  db.products = db.products.filter(x=>x.id!==id);
+  save(); renderInventory(); refreshProductSelect();
+  toast('Product deleted');
+}
+
+/* ------------- Sales ------------- */
+function refreshProductSelect(){
+  const sel = document.getElementById('sProduct');
+  const cur = sel.value;
+  const avail = db.products;
+  if(avail.length===0){
+    sel.innerHTML = '<option value="">— No products yet, add some in Inventory —</option>';
+  }else{
+    sel.innerHTML = avail.map(p=>
+      `<option value="${p.id}">${esc(p.name)} — stock: ${p.qty}${p.price?(' · ₹'+p.price):''}</option>`
+    ).join('');
+    if(cur && avail.find(p=>p.id===cur)) sel.value = cur;
+  }
+  onSaleProductChange();
+  if(!document.getElementById('sDate').value) document.getElementById('sDate').value = todayStr();
+}
+
+function onSaleProductChange(){
+  const p = db.products.find(x=>x.id===document.getElementById('sProduct').value);
+  const priceEl = document.getElementById('sPrice');
+  const hint = document.getElementById('sPriceHint');
+  // Reset the price field each time you switch product so nothing is "fixed".
+  priceEl.value = '';
+  priceEl.dataset.touched = '';
+  if(p){
+    // find the most recent sale of this product to show as a helpful reminder
+    const past = [...db.sales].filter(s=>s.productId===p.id);
+    const last = past.length ? past[past.length-1] : null;
+    let parts = ['wholesale '+money(p.cost)];
+    if(p.price) parts.push('suggested '+money(p.price));
+    if(last) parts.push('last sold '+money(last.price));
+    hint.textContent = parts.join(' · ');
+  }else{
+    hint.textContent = '';
+  }
+  updateSalePreview();
+}
+document.getElementById('sPrice').addEventListener('input', function(){ this.dataset.touched='1'; });
+
+function updateSalePreview(){
+  const p = db.products.find(x=>x.id===document.getElementById('sProduct').value);
+  const box = document.getElementById('salePreview');
+  if(!p){ box.style.display='none'; return; }
+  const qty = parseInt(document.getElementById('sQty').value)||0;
+  const price = parseFloat(document.getElementById('sPrice').value)||0;
+  box.style.display='flex';
+  document.getElementById('spStock').textContent = p.qty;
+  document.getElementById('spCost').textContent = money(p.cost*qty);
+  document.getElementById('spRevenue').textContent = money(price*qty);
+  document.getElementById('spProfit').textContent = money((price-p.cost)*qty);
+}
+
+function recordSale(){
+  const p = db.products.find(x=>x.id===document.getElementById('sProduct').value);
+  if(!p){ toast('Select a product first','err'); return; }
+  const qty = parseInt(document.getElementById('sQty').value);
+  const price = parseFloat(document.getElementById('sPrice').value);
+  const date = document.getElementById('sDate').value || todayStr();
+  if(isNaN(qty)||qty<1){ toast('Enter a valid quantity','err'); return; }
+  if(isNaN(price)||price<0){ toast('Enter the retail price','err'); return; }
+  if(qty>p.qty){ toast('Only '+p.qty+' in stock for "'+p.name+'"','err'); return; }
+
+  db.sales.push({
+    id: uid(), productId:p.id, name:p.name, category:p.category||'',
+    qty, cost:p.cost, price, date,
+    revenue: price*qty, profit:(price-p.cost)*qty
+  });
+  p.qty -= qty;
+  save();
+  document.getElementById('sQty').value = 1;
+  document.getElementById('sPrice').value = '';
+  document.getElementById('sPrice').dataset.touched = '';
+  toast('Sale recorded · profit '+money((price-p.cost)*qty),'ok');
+  refreshProductSelect(); renderSales();
+}
+
+function renderSales(){
+  const q = (document.getElementById('salesSearch').value||'').toLowerCase();
+  const list = [...db.sales].filter(s=> s.name.toLowerCase().includes(q)).reverse();
+  const body = document.getElementById('salesBody');
+  const totRev = db.sales.reduce((a,s)=>a+s.revenue,0);
+  const totProf = db.sales.reduce((a,s)=>a+s.profit,0);
+  document.getElementById('salesTotalLbl').textContent =
+    db.sales.length+' sales · revenue '+money(totRev)+' · profit '+money(totProf);
+  if(list.length===0){
+    body.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="em">🛒</div><p>${db.sales.length===0?'No sales yet — record your first sale above.':'No sales match your search.'}</p></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(s=>`<tr>
+    <td>${fmtDate(s.date)}</td>
+    <td><div class="prod-name">${esc(s.name)}</div></td>
+    <td class="num">${s.qty}</td>
+    <td class="num">${money(s.cost)}</td>
+    <td class="num">${money(s.price)}</td>
+    <td class="num">${money(s.revenue)}</td>
+    <td class="num ${s.profit>=0?'pos':'neg'}">${money(s.profit)}</td>
+    <td><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')" title="Delete & return stock">✕</button></div></td>
+  </tr>`).join('');
+}
+
+function deleteSale(id){
+  const s = db.sales.find(x=>x.id===id); if(!s) return;
+  if(!confirm('Delete this sale? '+s.qty+' × '+s.name+' will be returned to stock.')) return;
+  const p = db.products.find(x=>x.id===s.productId);
+  if(p) p.qty += s.qty;
+  db.sales = db.sales.filter(x=>x.id!==id);
+  save(); renderSales(); refreshProductSelect();
+  toast('Sale removed, stock returned');
+}
+
+/* ------------- Expenses ------------- */
+function addExpense(){
+  const desc = document.getElementById('eDesc').value.trim();
+  const cat = document.getElementById('eCat').value;
+  const amt = parseFloat(document.getElementById('eAmt').value);
+  const date = document.getElementById('eDate').value || todayStr();
+  if(!desc){ toast('Enter a description','err'); return; }
+  if(isNaN(amt)||amt<0){ toast('Enter a valid amount','err'); return; }
+  db.expenses.push({id:uid(), desc, category:cat, amount:amt, date});
+  save();
+  document.getElementById('eDesc').value='';
+  document.getElementById('eAmt').value='';
+  toast('Expense added','ok');
+  renderExpenses();
+}
+
+function renderExpenses(){
+  const list = [...db.expenses].reverse();
+  const body = document.getElementById('expBody');
+  const tot = db.expenses.reduce((a,e)=>a+e.amount,0);
+  document.getElementById('expTotalLbl').textContent = db.expenses.length+' entries · total '+money(tot);
+  if(list.length===0){
+    body.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="em">💸</div><p>No expenses yet.</p></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(e=>`<tr>
+    <td>${fmtDate(e.date)}</td>
+    <td>${esc(e.desc)}</td>
+    <td><span class="pill pill-low">${esc(e.category)}</span></td>
+    <td class="num">${money(e.amount)}</td>
+    <td><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">✕</button></div></td>
+  </tr>`).join('');
+}
+function deleteExpense(id){
+  db.expenses = db.expenses.filter(x=>x.id!==id);
+  save(); renderExpenses(); toast('Expense deleted');
+}
+
+/* ------------- Wholesale bills ------------- */
+let pendingBillImage = null; // compressed data-URL awaiting save
+async function onBillFile(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('Please choose an image file','err'); return; }
+  toast('Processing photo…');
+  try{
+    pendingBillImage = await compressImage(file);
+    const wrap = document.getElementById('billPreviewWrap');
+    document.getElementById('billPreviewImg').src = pendingBillImage;
+    wrap.style.display = 'block';
+    if(!document.getElementById('bDate').value) document.getElementById('bDate').value = todayStr();
+    toast('Photo ready — add details and save','ok');
+  }catch(e){ toast('Could not read that image','err'); }
+}
+
+async function addBill(){
+  if(!pendingBillImage){ toast('Choose a bill photo first','err'); return; }
+  const supplier = document.getElementById('bSupplier').value.trim();
+  const amount = parseFloat(document.getElementById('bAmount').value);
+  const date = document.getElementById('bDate').value || todayStr();
+  const note = document.getElementById('bNote').value.trim();
+  const bill = { id:uid(), supplier, amount:isNaN(amount)?0:amount, date, note };
+  if(CLOUD && authToken){
+    // upload image to server so it syncs across devices
+    toast('Uploading photo…');
+    try{
+      const r = await fetch(API+'/api/image', {method:'POST', headers:apiHeaders(), body:JSON.stringify({image:pendingBillImage})});
+      const j = await r.json();
+      if(j.url){ bill.imgUrl = j.url; }
+      else throw new Error();
+    }catch(e){ toast('Photo upload failed','err'); return; }
+  }else{
+    const imgId = 'img_' + uid();
+    await idbPut(imgId, pendingBillImage);
+    bill.imgId = imgId;
+  }
+  db.bills.push(bill);
+  save();
+  // reset form
+  pendingBillImage = null;
+  document.getElementById('bFile').value='';
+  document.getElementById('bSupplier').value='';
+  document.getElementById('bAmount').value='';
+  document.getElementById('bNote').value='';
+  document.getElementById('billPreviewWrap').style.display='none';
+  toast('Bill saved','ok');
+  renderBills();
+}
+
+async function renderBills(){
+  const box = document.getElementById('billsGallery');
+  const bills = [...db.bills].reverse();
+  const tot = db.bills.reduce((a,b)=>a+(b.amount||0),0);
+  document.getElementById('billsTotalLbl').textContent =
+    db.bills.length + ' bill' + (db.bills.length!==1?'s':'') + (tot>0?(' · total '+money(tot)):'');
+  if(bills.length===0){
+    box.innerHTML = `<div class="empty"><div class="em">🧾</div><p>No bills uploaded yet — add a photo of your first purchase bill above.</p></div>`;
+    return;
+  }
+  box.innerHTML = '<div class="bills-grid">' + bills.map(b=>`
+    <div class="bill-card">
+      <img class="bill-thumb" id="thumb_${b.id}" alt="bill" onclick="viewBill('${b.id}')">
+      <div class="bill-info">
+        <div class="bill-supplier">${b.supplier?esc(b.supplier):'Purchase bill'}</div>
+        ${b.amount?`<div class="bill-amt">${money(b.amount)}</div>`:''}
+        <div class="bill-meta">${fmtDate(b.date)}</div>
+        ${b.note?`<div class="bill-note">${esc(b.note)}</div>`:''}
+      </div>
+      <div class="bill-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewBill('${b.id}')">🔍 View</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBill('${b.id}')">✕ Delete</button>
+      </div>
+    </div>`).join('') + '</div>';
+  // load thumbnails (from server URL in cloud mode, or IndexedDB offline)
+  bills.forEach(async b=>{
+    const el = document.getElementById('thumb_'+b.id);
+    if(!el) return;
+    const src = await billSrc(b);
+    if(src) el.src = src;
+  });
+}
+
+async function billSrc(b){
+  if(b.imgUrl) return API + b.imgUrl;
+  if(b.imgId) return await idbGet(b.imgId);
+  return null;
+}
+
+async function viewBill(billId){
+  const b = db.bills.find(x=>x.id===billId); if(!b) return;
+  const src = await billSrc(b);
+  if(!src){ toast('Image not found','err'); return; }
+  document.getElementById('imgModalImg').src = src;
+  document.getElementById('imgModal').classList.add('open');
+}
+function closeImgModal(){ document.getElementById('imgModal').classList.remove('open'); }
+
+async function deleteBill(id){
+  if(!confirm('Delete this bill photo permanently?')) return;
+  const b = db.bills.find(x=>x.id===id);
+  if(b && b.imgId) await idbDel(b.imgId);
+  db.bills = db.bills.filter(x=>x.id!==id);
+  save(); renderBills();
+  toast('Bill deleted');
+}
+
+/* ------------- Reports & charts ------------- */
+let reportRange = 'weekly';
+function setReportRange(r){
+  reportRange = r;
+  document.querySelectorAll('#reportRange .chip').forEach(c=> c.classList.toggle('active', c.dataset.range===r));
+  renderReports();
+}
+// period key + label for a date string
+function periodKey(dateStr, range){
+  const d = new Date(dateStr+'T00:00:00'); if(isNaN(d)) return null;
+  if(range==='monthly'){
+    return { key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),
+             label: d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'}) };
+  }
+  // weekly: ISO-ish week starting Monday
+  const dt = new Date(d); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day);
+  const key = dt.toISOString().slice(0,10);
+  return { key, label: dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) };
+}
+function buildPeriods(range, count){
+  // returns array of {key,label} for the last `count` periods up to today (oldest first)
+  const out=[]; const now=new Date();
+  for(let i=count-1;i>=0;i--){
+    let d=new Date(now);
+    if(range==='monthly') d.setMonth(d.getMonth()-i);
+    else d.setDate(d.getDate()-i*7);
+    out.push(periodKey(d.toISOString().slice(0,10), range));
+  }
+  return out;
+}
+function aggregate(range, count){
+  const periods = buildPeriods(range, count);
+  const map = {}; periods.forEach(p=> map[p.key]={revenue:0,profit:0,expenses:0,purchases:0});
+  db.sales.forEach(s=>{ const p=periodKey(s.date,range); if(p&&map[p.key]){ map[p.key].revenue+=s.revenue; map[p.key].profit+=s.profit; } });
+  db.expenses.forEach(e=>{ const p=periodKey(e.date,range); if(p&&map[p.key]){ map[p.key].expenses+=e.amount; } });
+  (db.bills||[]).forEach(b=>{ const p=periodKey(b.date,range); if(p&&map[p.key]){ map[p.key].purchases+=(b.amount||0); } });
+  return periods.map(p=> Object.assign({label:p.label}, map[p.key]));
+}
+
+function renderReports(){
+  const count = reportRange==='monthly' ? 6 : 8;
+  const data = aggregate(reportRange, count);
+  const unit = reportRange==='monthly' ? 'month' : 'week';
+
+  // comparison: latest vs previous
+  const cur = data[data.length-1] || {revenue:0,profit:0,expenses:0,purchases:0};
+  const prev = data[data.length-2] || {revenue:0,profit:0,expenses:0,purchases:0};
+  const pct = (a,b)=>{ if(b===0) return a>0?100:0; return ((a-b)/Math.abs(b))*100; };
+  const arrow = v=> v>0.5?'▲':(v<-0.5?'▼':'▬');
+  const cls = (v,goodUp=true)=> Math.abs(v)<0.5?'':((v>0)===goodUp?'pos':'neg');
+  const box = document.getElementById('reportCompare');
+  const cards = [
+    {lbl:'🛒 Revenue', cur:cur.revenue, v:pct(cur.revenue,prev.revenue), good:true, cls:'brand'},
+    {lbl:'💰 Profit', cur:cur.profit, v:pct(cur.profit,prev.profit), good:true, cls:'green'},
+    {lbl:'📦 Purchases', cur:cur.purchases, v:pct(cur.purchases,prev.purchases), good:false, cls:'amber'},
+    {lbl:'💸 Expenses', cur:cur.expenses, v:pct(cur.expenses,prev.expenses), good:false, cls:'red'},
+  ];
+  box.innerHTML = cards.map(c=>`
+    <div class="stat ${c.cls}">
+      <div class="lbl">${c.lbl}</div>
+      <div class="val">${money(c.cur)}</div>
+      <div class="sub ${cls(c.v,c.good)}">${arrow(c.v)} ${Math.abs(c.v).toFixed(0)}% vs last ${unit}</div>
+    </div>`).join('');
+
+  drawBarChart(data);
+  drawLineChart(data);
+  renderTopProducts();
+}
+
+function drawBarChart(data){
+  const W = Math.max(data.length*90, 560), H=260, pad=34, base=H-pad;
+  const max = Math.max(1, ...data.map(d=> Math.max(d.revenue,d.profit,d.expenses,d.purchases)));
+  const groupW = (W-pad*2)/data.length;
+  const barW = Math.min(15, groupW/5);
+  const series=[['revenue','var(--brand)'],['profit','var(--green)'],['purchases','var(--amber)'],['expenses','var(--red)']];
+  let svg=`<svg class="bar-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  // gridlines
+  for(let g=0;g<=4;g++){ const y=pad+(base-pad)*g/4; const val=max*(1-g/4);
+    svg+=`<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="#eef1f6"/>`;
+    svg+=`<text x="4" y="${y+3}">${shortNum(val)}</text>`; }
+  data.forEach((d,i)=>{
+    const gx = pad + groupW*i + groupW/2;
+    series.forEach((s,si)=>{
+      const v=d[s[0]]; const h=(v/max)*(base-pad);
+      const x = gx - (barW*2 + 3*1.5) + si*(barW+1.5);
+      svg+=`<rect x="${x.toFixed(1)}" y="${(base-h).toFixed(1)}" width="${barW}" height="${Math.max(0,h).toFixed(1)}" rx="2" fill="${s[1]}"><title>${s[0]}: ${money(v)}</title></rect>`;
+    });
+    svg+=`<text x="${gx}" y="${H-10}" text-anchor="middle">${d.label}</text>`;
+  });
+  svg+=`</svg>`;
+  document.getElementById('barChart').innerHTML = svg;
+}
+
+function drawLineChart(data){
+  const W=Math.max(data.length*90,560), H=220, pad=34, base=H-pad;
+  const vals=data.map(d=>d.profit);
+  const max=Math.max(1,...vals), min=Math.min(0,...vals);
+  const range=max-min||1;
+  const x=i=> pad + (W-pad*2)*(data.length===1?0.5:i/(data.length-1));
+  const y=v=> pad + (base-pad)*(1-(v-min)/range);
+  let svg=`<svg class="line-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  for(let g=0;g<=4;g++){ const yy=pad+(base-pad)*g/4; const val=max-(range)*g/4;
+    svg+=`<line x1="${pad}" y1="${yy}" x2="${W-pad}" y2="${yy}" stroke="#eef1f6"/>`;
+    svg+=`<text x="4" y="${yy+3}">${shortNum(val)}</text>`; }
+  const pts=data.map((d,i)=>`${x(i).toFixed(1)},${y(d.profit).toFixed(1)}`);
+  // area fill
+  svg+=`<polyline points="${pad},${base} ${pts.join(' ')} ${W-pad},${base}" fill="rgba(5,150,105,.12)" stroke="none"/>`;
+  svg+=`<polyline points="${pts.join(' ')}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  data.forEach((d,i)=>{
+    svg+=`<circle cx="${x(i).toFixed(1)}" cy="${y(d.profit).toFixed(1)}" r="4" fill="#fff" stroke="var(--green)" stroke-width="2.5"><title>${d.label}: ${money(d.profit)}</title></circle>`;
+    svg+=`<text x="${x(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${d.label}</text>`;
+  });
+  svg+=`</svg>`;
+  document.getElementById('lineChart').innerHTML = svg;
+}
+
+function renderTopProducts(){
+  const map={};
+  db.sales.forEach(s=>{ if(!map[s.name]) map[s.name]={name:s.name,qty:0,profit:0,revenue:0}; map[s.name].qty+=s.qty; map[s.name].profit+=s.profit; map[s.name].revenue+=s.revenue; });
+  const list=Object.values(map).sort((a,b)=>b.profit-a.profit).slice(0,6);
+  const box=document.getElementById('topProducts');
+  if(list.length===0){ box.innerHTML=`<div class="empty"><div class="em">🏆</div><p>No sales yet — your best sellers will appear here.</p></div>`; return; }
+  const maxP=Math.max(...list.map(l=>l.profit),1);
+  box.innerHTML='<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Units sold</th><th class="num">Revenue</th><th class="num">Profit</th><th style="width:120px">Share</th></tr></thead><tbody>'+
+    list.map(l=>`<tr><td class="prod-name">${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${money(l.revenue)}</td><td class="num pos">${money(l.profit)}</td>
+      <td><div style="background:#eef2ff;border-radius:6px;height:10px;overflow:hidden"><div style="height:100%;width:${(l.profit/maxP*100).toFixed(0)}%;background:var(--green)"></div></div></td></tr>`).join('')+
+    '</tbody></table></div>';
+}
+function shortNum(n){ n=Math.round(n); if(Math.abs(n)>=100000) return '₹'+(n/100000).toFixed(1)+'L'; if(Math.abs(n)>=1000) return '₹'+(n/1000).toFixed(1)+'k'; return '₹'+n; }
+
+/* ------------- Dashboard ------------- */
+function renderDashboard(){
+  const totRev = db.sales.reduce((a,s)=>a+s.revenue,0);
+  const grossProfit = db.sales.reduce((a,s)=>a+s.profit,0);
+  const totExp = db.expenses.reduce((a,e)=>a+e.amount,0);
+  const netProfit = grossProfit - totExp;
+  const stockValue = db.products.reduce((a,p)=>a+p.cost*p.qty,0);
+  const stockUnits = db.products.reduce((a,p)=>a+p.qty,0);
+  const totalSold = db.sales.reduce((a,s)=>a+s.qty,0);
+
+  countUp(document.getElementById('dashNetProfit'), netProfit);
+  document.getElementById('dashNetProfit').style.color = netProfit>=0 ? 'var(--green)' : 'var(--red)';
+  countUp(document.getElementById('dashRevenue'), totRev);
+  document.getElementById('dashSalesCount').textContent = db.sales.length+' sales · '+totalSold+' items sold';
+  countUp(document.getElementById('dashStockValue'), stockValue);
+  document.getElementById('dashStockUnits').textContent = stockUnits+' units · '+db.products.length+' products';
+  countUp(document.getElementById('dashExpenses'), totExp);
+  document.getElementById('dashExpCount').textContent = db.expenses.length+' entries';
+
+  const margin = totRev>0 ? (grossProfit/totRev*100) : 0;
+  document.getElementById('dashBreakdown').innerHTML = `
+    <tr><td>🛒 Total sales revenue</td><td class="num">${money(totRev)}</td></tr>
+    <tr><td>📦 Cost of goods sold</td><td class="num">${money(totRev-grossProfit)}</td></tr>
+    <tr><td>💵 Gross profit (from sales)</td><td class="num pos">${money(grossProfit)}</td></tr>
+    <tr><td>💸 Total shop expenses</td><td class="num neg">− ${money(totExp)}</td></tr>
+    <tr style="border-top:2px solid var(--line)"><td><b>💰 Net profit</b></td><td class="num"><b class="${netProfit>=0?'pos':'neg'}">${money(netProfit)}</b></td></tr>
+    <tr><td>📊 Average profit margin</td><td class="num">${margin.toFixed(1)}%</td></tr>
+    <tr><td>🧮 Current stock value (at cost)</td><td class="num">${money(stockValue)}</td></tr>
+  `;
+
+  // low stock
+  const low = db.products.filter(p=> p.qty<=(p.low||0));
+  const box = document.getElementById('lowStockBox');
+  if(low.length===0){
+    box.innerHTML = `<div class="empty"><div class="em">✅</div><p>All products are well stocked.</p></div>`;
+  }else{
+    box.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Alert level</th><th>Status</th></tr></thead><tbody>`+
+      low.map(p=>{const st=stockStatus(p);return `<tr><td class="prod-name">${esc(p.name)}</td><td class="num">${p.qty}</td><td class="num">${p.low||0}</td><td><span class="pill ${st.cls}">${st.txt}</span></td></tr>`;}).join('')+
+      `</tbody></table></div>`;
+  }
+
+  // recent sales
+  const recent = [...db.sales].reverse().slice(0,6);
+  const rb = document.getElementById('dashRecentSales');
+  if(recent.length===0){
+    rb.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="em">🧾</div><p>No sales recorded yet.</p></div></td></tr>`;
+  }else{
+    rb.innerHTML = recent.map(s=>`<tr>
+      <td>${fmtDate(s.date)}</td><td class="prod-name">${esc(s.name)}</td>
+      <td class="num">${s.qty}</td><td class="num">${money(s.revenue)}</td>
+      <td class="num ${s.profit>=0?'pos':'neg'}">${money(s.profit)}</td>
+    </tr>`).join('');
+  }
+}
+
+/* ------------- Data import/export ------------- */
+async function exportData(){
+  toast('Preparing backup (including bill photos)…');
+  // collect bill images so the backup is complete
+  const images = {};
+  for(const b of (db.bills||[])){
+    const data = await idbGet(b.imgId);
+    if(data) images[b.imgId] = data;
+  }
+  const payload = Object.assign({}, db, {__images: images});
+  const blob = new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'shop-backup-'+todayStr()+'.json';
+  a.click();
+  toast('Backup downloaded','ok');
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.products) throw new Error('bad file');
+      const images = data.__images || {};
+      delete data.__images;
+      db = Object.assign({shopName:'',products:[],sales:[],expenses:[],bills:[]}, data);
+      // restore bill images into IndexedDB
+      for(const key in images){ await idbPut(key, images[key]); }
+      save(); initUI();
+      toast('Backup restored','ok');
+    }catch(err){ toast('Invalid backup file','err'); }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+function downloadCSV(){
+  if(db.sales.length===0){ toast('No sales to export','err'); return; }
+  const rows = [['Date','Product','Category','Qty','Cost/unit','Price/unit','Revenue','Profit']];
+  db.sales.forEach(s=> rows.push([s.date,s.name,s.category||'',s.qty,s.cost,s.price,s.revenue,s.profit]));
+  const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sales-'+todayStr()+'.csv';
+  a.click();
+  toast('CSV exported','ok');
+}
+async function clearAll(){
+  if(!confirm('This will permanently delete ALL products, sales, expenses and bill photos. Continue?')) return;
+  if(!confirm('Are you absolutely sure? This cannot be undone.')) return;
+  for(const b of (db.bills||[])){ await idbDel(b.imgId); }
+  db = {shopName:'',products:[],sales:[],expenses:[],bills:[]};
+  save(); initUI();
+  toast('All data cleared');
+}
+
+/* ------------- helpers ------------- */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function initUI(){
+  shopNameEl.value = db.shopName || '';
+  renderInventory(); renderSales(); renderExpenses(); renderBills();
+  refreshProductSelect(); renderDashboard();
+  const cs = document.getElementById('cloudStatusNote');
+  if(cs){ cs.innerHTML = CLOUD
+    ? '☁️ <b style="color:var(--green)">Cloud sync is ON</b> — your data is saved online and syncs across all your devices.'
+    : '📴 Cloud sync is OFF (offline mode). See SETUP-GUIDE.md to turn on free sync across devices.'; }
+}
+
+/* ------------- Theme (light/dark) ------------- */
+function toggleTheme(){
+  const dark = !document.body.classList.contains('dark');
+  document.body.classList.toggle('dark', dark);
+  localStorage.setItem('shopTheme', dark?'dark':'light');
+  document.getElementById('themeBtn').textContent = dark?'☀️':'🌙';
+}
+(function initTheme(){
+  if(localStorage.getItem('shopTheme')==='dark'){
+    document.body.classList.add('dark');
+    const b=document.getElementById('themeBtn'); if(b) b.textContent='☀️';
+  }
+})();
+
+/* ------------- Count-up animation for stat numbers ------------- */
+function countUp(el, target){
+  if(!el) return;
+  const dur=650, start=performance.now(), from=0;
+  function tick(now){
+    const p=Math.min(1,(now-start)/dur);
+    const eased=1-Math.pow(1-p,3);
+    el.textContent = money(from+(target-from)*eased);
+    if(p<1) requestAnimationFrame(tick);
+    else el.textContent = money(target);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ------------- Service worker (installable app) ------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+/* ------------- boot ------------- */
+loadAuth();
+(async function boot(){
+  await initCloud();
+  if(CLOUD){
+    applyAuthLabels();
+    // resume a saved cloud session if present
+    let sess=null; try{ sess=JSON.parse(localStorage.getItem(TOKEN_KEY)); }catch(e){}
+    if(sess && sess.token){
+      authToken = sess.token; currentUID = sess.email;
+      // verify token still valid
+      try{
+        const r = await fetch(API+'/api/data', {headers:apiHeaders()});
+        if(r.ok){ cloudEnterApp(sess.email); return; }
+      }catch(e){}
+      authToken=null; localStorage.removeItem(TOKEN_KEY);
+    }
+    showAuthMode('login');
+    document.getElementById('authScreen').style.display='grid';
+    document.body.classList.add('locked');
+  }else if(auth.current && auth.users[auth.current]){
+    enterApp();               // resume local session
+  }else{
+    showAuthMode(Object.keys(auth.users).length ? 'login' : 'signup');
+    document.getElementById('authScreen').style.display='grid';
+    document.body.classList.add('locked');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "shop-manager",
+  "version": "2.0.0",
+  "description": "Shop Manager - inventory, sales, profit, expenses with cloud sync",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.8.0"
+  }
+}
